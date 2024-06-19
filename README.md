@@ -56,6 +56,15 @@ poetry install
 
 ## Usage
 
+### Using Docker
+
+This project provides a docker-compose.yml file to run the project in a docker container. To run the project in a docker container, follow these steps:
+
+```bash
+docker-compose up
+
+### Using Python
+
 After installing the dependencies, you can run the project as follows:
 
 1. **Preprocess the data:**
