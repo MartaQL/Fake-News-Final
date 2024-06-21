@@ -1,5 +1,6 @@
 import streamlit as st
 import string
+import requests
 import gensim
 from scipy.linalg import get_blas_funcs
 from scipy.linalg.lapack import get_lapack_funcs
@@ -15,14 +16,16 @@ except ImportError:
 
 
 nltk.download('stopwords')
-
 stop_words = nltk.corpus.stopwords.words('english')
-
 stop_words = set(stop_words)
 
 EMBEDDING_DIM = 100
-WORD2VEC_PATH = "models/word2vec.model"
-word2Vec = Word2Vec.load(WORD2VEC_PATH)
+#WORD2VEC_PATH = "models/word2vec.model"
+API_URL = "http://127.0.0.1:5000/invocations"
+HEADERS = {"Content-Type": "application/json"}
+
+#word2Vec = Word2Vec.load(WORD2VEC_PATH)
+
 
 
 
@@ -63,29 +66,55 @@ def vectorize_text(text:list[str]) -> np.ndarray:
 
     text_vector = np.zeros(EMBEDDING_DIM, np.float32)
     for word in text:
-        word_vector = word2Vec_model.wv[word]
+        try:
+            word_vector = word2vec_model.wv[word]
+        except KeyError:
+            st.warning(f"Word {word} not in vocabulary")
         text_vector += word_vector
-
-    text_vector/= len(text)
 
     return text_vector
 
 
+def classify_embedding(embedding: np.ndarray) -> bool:
+    """Classify a text by using ML model
+
+    Args:
+       embedding (np.ndarray): the vectorized text. Shape (100,)
+
+    Returns:
+       bool: True if the text is real, False otherwise
+    """
+    
+    data = {
+
+    "inputs": embedding.tolist(),
+
+       }
+
+    response = requests.post(API_URL, json = data, headers = HEADERS)
+    response_json = response.json()
+    is_real = bool(response_json["predictions"][0])
+
+    return is_real
+
+
 
 st.title('Fake News Detector')
-
 st.subheader('Detecting fake news with machine learning')
 
 text_to_predict = st.text_area('Enter the news to check if it is fake or not')
-
-text_to_predict_clean = clean_text(text_to_predict)
-
-text_to_predict_vectorized = vectorize_text(text_to_predict_clean)
-
-
 button = st.button('Analyze')
 
 if button:
+    text_to_predict_clean = clean_text(text_to_predict)
+    text_to_predict_vectorized = vectorize_text(text_to_predict_clean)
+    is_real = classify_embedding(text_to_predict_vectorized) 
+
     st.text(text_to_predict_clean)
     st.text(text_to_predict_vectorized)
-    st.success('The news are real!')
+    
+
+    if is_real:
+       st.success('The news are real!')
+    else:
+        st.error('The news are fake!')
