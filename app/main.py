@@ -15,12 +15,12 @@ except ImportError:
    from scipy.linalg import triu
 
 
-nltk.download('stopwords')
-stop_words = nltk.corpus.stopwords.words('english')
-stop_words = set(stop_words)
+#nltk.download('stopwords')
+#stop_words = nltk.corpus.stopwords.words('english')
+#stop_words = set(stop_words)
 
 EMBEDDING_DIM = 100
-#WORD2VEC_PATH = "models/word2vec.model"
+WORD2VEC_PATH = "models/word2vec.model"
 API_URL = "http://127.0.0.1:5000/invocations"
 HEADERS = {"Content-Type": "application/json"}
 
@@ -84,7 +84,8 @@ def classify_embedding(embedding: np.ndarray) -> bool:
     Returns:
        bool: True if the text is real, False otherwise
     """
-    
+    embedding = np.expand_dims(embedding, axis=0) #change from (100,) to (1, 100)
+
     data = {
 
     "inputs": embedding.tolist(),
@@ -94,10 +95,8 @@ def classify_embedding(embedding: np.ndarray) -> bool:
     response = requests.post(API_URL, json = data, headers = HEADERS)
     response_json = response.json()
     is_real = bool(response_json["predictions"][0])
-
     return is_real
-
-
+   
 
 st.title('Fake News Detector')
 st.subheader('Detecting fake news with machine learning')
@@ -106,15 +105,14 @@ text_to_predict = st.text_area('Enter the news to check if it is fake or not')
 button = st.button('Analyze')
 
 if button:
+    st.info("Cleaning text ...")
     text_to_predict_clean = clean_text(text_to_predict)
+    st.info("Vectorizing text ...")
     text_to_predict_vectorized = vectorize_text(text_to_predict_clean)
+    st.info("Classifying text ...")
     is_real = classify_embedding(text_to_predict_vectorized) 
-
-    st.text(text_to_predict_clean)
-    st.text(text_to_predict_vectorized)
     
-
     if is_real:
        st.success('The news are real!')
     else:
-        st.error('The news are fake!')
+       st.error('The news are fake!')
